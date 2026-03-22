@@ -1774,11 +1774,12 @@ async function uploadAvatar(input) {
   showAvatarMsg('uploading');
  
   try {
+    const user = await auth0Client.getUser();
+ 
     // Upload to Cloudinary
     const formData = new FormData();
     formData.append('file', file);
     formData.append('upload_preset', CLOUDINARY_PRESET);
-    formData.append('folder', 'poclus-avatars');
  
     const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`, {
       method: 'POST',
@@ -1795,7 +1796,6 @@ async function uploadAvatar(input) {
     const imageUrl = data.secure_url;
  
     // Save URL to localStorage keyed by user ID
-    const user = await auth0Client.getUser();
     localStorage.setItem('avatar_' + user.sub, imageUrl);
  
     // Update all avatars on page
