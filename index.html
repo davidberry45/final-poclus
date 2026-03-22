@@ -2185,13 +2185,31 @@ function finishLoading(isAuthed) {
   const content = document.getElementById('site-content');
   if (bar) bar.style.width = '100%';
   setTimeout(() => {
-    if (loading) loading.style.display = 'none';
+    if (loading) {
+      loading.style.transition = 'opacity 0.4s ease';
+      loading.style.opacity = '0';
+      setTimeout(() => { loading.style.display = 'none'; }, 400);
+    }
     if (isAuthed) {
       if (gate) gate.classList.add('hidden');
-      if (content) content.classList.add('visible');
+      if (content) {
+        content.style.opacity = '0';
+        content.classList.add('visible');
+        setTimeout(() => {
+          content.style.transition = 'opacity 0.4s ease';
+          content.style.opacity = '1';
+        }, 50);
+      }
     } else {
-      if (gate) gate.classList.remove('hidden');
-      generateStars();
+      if (gate) {
+        gate.style.opacity = '0';
+        gate.classList.remove('hidden');
+        setTimeout(() => {
+          gate.style.transition = 'opacity 0.4s ease';
+          gate.style.opacity = '1';
+        }, 50);
+        generateStars();
+      }
     }
   }, 500);
 }
@@ -2280,16 +2298,27 @@ async function initAuth0() {
       authorizationParams: { redirect_uri: AUTH0_REDIRECT }
     });
 
+    // Handle redirect callback after Google/email login
     if (window.location.search.includes('code=') && window.location.search.includes('state=')) {
-      await auth0Client.handleRedirectCallback();
+      try {
+        await auth0Client.handleRedirectCallback();
+      } catch(e) {
+        console.warn('Redirect callback error:', e);
+      }
       window.history.replaceState({}, document.title, window.location.pathname);
     }
 
     const isAuthed = await auth0Client.isAuthenticated();
     clearInterval(loadInterval);
-    finishLoading(isAuthed);
 
-    if (isAuthed) await updateAuthUI();
+    if (isAuthed) {
+      // Logged in — show the site immediately
+      await updateAuthUI();
+      finishLoading(true);
+    } else {
+      // Not logged in — show the gate
+      finishLoading(false);
+    }
   } catch(e) {
     console.error('Auth0 init error:', e);
     clearInterval(loadInterval);
