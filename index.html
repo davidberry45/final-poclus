@@ -11,6 +11,8 @@
 <meta property="og:type" content="website">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script>emailjs.init('2s_8C1G-9eL6GELLh');</script>
 <script src="https://cdn.auth0.com/js/auth0-spa-js/2.0/auth0-spa-js.production.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
@@ -1728,7 +1730,7 @@ footer{
 <script>
 // ── CLOUDINARY AVATAR UPLOAD ──
 const CLOUDINARY_CLOUD = 'dztcgqrkr';
-const CLOUDINARY_PRESET = 'poclus';
+const CLOUDINARY_PRESET = '43bae051-2605-4673-ae0f-e84c582696c3';
  
 function setAllAvatars(src, initials) {
   // Nav avatar
@@ -2160,15 +2162,27 @@ function toggleFaq(btn) {
  
 // ── CONTACT FORM ──
 function submitContact() {
-  const name = document.getElementById('c-name').value.trim();
-  const email = document.getElementById('c-email').value.trim();
-  const msg = document.getElementById('c-msg').value.trim();
+  const name    = document.getElementById('c-name').value.trim();
+  const email   = document.getElementById('c-email').value.trim();
+  const subject = document.getElementById('c-subject').value.trim();
+  const msg     = document.getElementById('c-msg').value.trim();
+  const ok      = document.getElementById('contact-ok');
+  const btn     = document.querySelector('#contact button.btn-primary');
   if (!name||!email||!msg) { alert('Please fill in all fields.'); return; }
-  const ok = document.getElementById('contact-ok');
-  ok.style.display = 'block';
-  document.getElementById('c-name').value='';
-  document.getElementById('c-email').value='';
-  document.getElementById('c-msg').value='';
+  if (btn) { btn.textContent = 'Sending…'; btn.disabled = true; }
+  emailjs.send('service_aqa7x8m', 'template_93vatnb', {
+    name, email, subject, message: msg
+  }).then(() => {
+    ok.style.display = 'block';
+    document.getElementById('c-name').value = '';
+    document.getElementById('c-email').value = '';
+    document.getElementById('c-msg').value = '';
+    if (btn) { btn.textContent = 'Send Message →'; btn.disabled = false; }
+  }).catch(err => {
+    alert('Failed to send — please try again or contact us on Discord.');
+    console.error('EmailJS error:', err);
+    if (btn) { btn.textContent = 'Send Message →'; btn.disabled = false; }
+  });
 }
  
 // ── COOKIE ──
@@ -2418,6 +2432,7 @@ async function submitApplication() {
   const scenario = document.getElementById('app-scenario').value.trim();
   const errEl    = document.getElementById('apply-error');
   const okEl     = document.getElementById('apply-success');
+  const btn      = document.querySelector('#apply .btn-primary');
   errEl.style.display = 'none'; okEl.style.display = 'none';
  
   if (!mc||!discord||!age||!role||!hours||!why||!exp||!scenario) {
@@ -2426,17 +2441,23 @@ async function submitApplication() {
   }
  
   const user = await auth0Client.getUser();
+  if (btn) { btn.textContent = 'Submitting…'; btn.disabled = true; }
+ 
+  // Send email
+  try {
+    await emailjs.send('service_aqa7x8m', 'template_uo9uwfr', {
+      mc, discord, age, role, hours, why, exp, scenario,
+      email: user.email
+    });
+  } catch(e) { console.error('EmailJS error:', e); }
+ 
+  // Save to localStorage
   const app = {
-    id: Date.now(),
-    mc, discord, age, role, hours, why, exp, scenario,
-    email: user.email,
-    userId: user.sub,
-    status: 'pending',
+    id: Date.now(), mc, discord, age, role, hours, why, exp, scenario,
+    email: user.email, userId: user.sub, status: 'pending',
     submittedAt: new Date().toISOString()
   };
- 
   const apps = getApplications();
-  // Remove old app from same user
   const filtered = apps.filter(a => a.userId !== user.sub);
   filtered.push(app);
   saveApplications(filtered);
@@ -2445,11 +2466,10 @@ async function submitApplication() {
   okEl.style.display = 'block';
   ['app-mc','app-discord','app-age','app-hours','app-why','app-exp','app-scenario'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
   document.getElementById('app-role').value = '';
+  if (btn) { btn.textContent = 'Submit Application →'; btn.disabled = false; }
  
-  // Update stat
   const statEl = document.getElementById('sp-stat-apps');
   if (statEl) statEl.textContent = getApplications().filter(a=>a.status==='pending').length;
- 
   showApplicationTracker(user.sub);
 }
  
